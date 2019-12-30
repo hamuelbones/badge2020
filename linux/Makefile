@@ -10,10 +10,11 @@ LINUX_OBJS=linuxcompat.o bline.o achievements.o xorshift.o
 APPDIR=../badge_apps
 IRXMIT=irxmit
 LASERTAG=lasertag
+SMASHOUT=smashout
 MAZE=maze
 USERNAME=username
 
-all:	${LINUX_OBJS} bin/${MAZE} bin/${IRXMIT} bin/${LASERTAG} bin/badge_monsters bin/fixup_monster bin/username bin/sample_app
+all:	${LINUX_OBJS} bin/${MAZE} bin/${IRXMIT} bin/${LASERTAG} bin/badge_monsters bin/fixup_monster bin/username bin/sample_app bin/smashout
 
 # we need to depend on ${BIN}/.t not on ${BIN} because BIN is a directory and the
 # timestamp changes whenever the directory contents change, and we need to depend
@@ -58,6 +59,9 @@ bin/${IRXMIT}:	${BIN} ${APPDIR}/${IRXMIT}.c linuxcompat.o bline.o
 
 bin/${LASERTAG}:	${BIN} ${APPDIR}/${LASERTAG}.c linuxcompat.o bline.o
 	$(CC) ${CFLAGS} ${GTKCFLAGS} ${LINUX_OBJS} -o bin/${LASERTAG} -I . -I ${BADGE_INC} ${APPDIR}/${LASERTAG}.c ${GTKLDFLAGS}
+
+bin/${SMASHOUT}:	${BIN} ${APPDIR}/${SMASHOUT}.c linuxcompat.o
+	$(CC) ${CFLAGS} ${GTKCFLAGS} ${LINUX_OBJS} -o bin/${SMASHOUT} -I . -I ${BADGE_INC} ${APPDIR}/${SMASHOUT}.c ${GTKLDFLAGS}
 
 bin/${MAZE}:	${BIN} ${APPDIR}/${MAZE}.c linuxcompat.o bline.o xorshift.o achievements.o\
 			${APPDIR}/bones_points.h \
