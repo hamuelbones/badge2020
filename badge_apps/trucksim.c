@@ -40,7 +40,7 @@ enum myprogram_state_t {
 //     int max_range = sizeof(roast_msgs)/sizeof(roast_msgs[0]);
 //     int random_roast = rand() % max_range;
 //     // printf("%s\n",roast_msgs[random_roast]);
-}
+// }
 
 static enum myprogram_state_t myprogram_state = MYPROGRAM_INIT;
 
