@@ -17,9 +17,10 @@ GHOSTDETECTOR=ghost-detector
 MAZE=maze
 USERNAME=username
 LUNARLANDER=lunarlander
+GAMEOFLIFE=game_of_life
 
 all:	${LINUX_OBJS} bin/${MAZE} bin/${IRXMIT} bin/${LASERTAG} bin/badge_monsters bin/fixup_monster bin/username \
-	bin/sample_app bin/smashout bin/ghost-detector bin/lunarlander
+	bin/sample_app bin/smashout bin/ghost-detector bin/lunarlander bin/game_of_life
 
 # we need to depend on ${BIN}/.t not on ${BIN} because BIN is a directory and the
 # timestamp changes whenever the directory contents change, and we need to depend
@@ -55,6 +56,9 @@ bin/badge_monsters:	${BIN} ${APPDIR}/badge_monsters.c linuxcompat.o bline.o ${LI
 bin/sample_app:	${BIN} ${APPDIR}/sample_app.c linuxcompat.o bline.o ${LINUX_OBJS} \
 			${MONSTERS}/smileymon.h
 	$(CC) ${CFLAGS} ${GTKCFLAGS} ${LINUX_OBJS} -o bin/sample_app -I . -I ${BADGE_INC} ${APPDIR}/sample_app.c ${GTKLDFLAGS}
+
+bin/${GAMEOFLIFE}:	${BIN} ${APPDIR}/${GAMEOFLIFE}.c linuxcompat.o bline.o ${LINUX_OBJS}
+	$(CC) ${CFLAGS} ${GTKCFLAGS} ${LINUX_OBJS} -o bin/game_of_life -I . -I ${BADGE_INC} ${APPDIR}/game_of_life.c ${GTKLDFLAGS}
 
 bin/fixup_monster:	${BIN} fixup_monster.c
 	$(CC) ${CFLAGS} -o bin/fixup_monster fixup_monster.c 
