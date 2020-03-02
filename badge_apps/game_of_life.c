@@ -56,7 +56,9 @@ static void render_grid(){
 	for (n = 0; n < GRID_SIZE; n++){
 		#ifdef __linux__
 			// printf("random 1 or 0: %d\n", xorshift((unsigned int *)&timestamp) % 2);
-			printf("%d", game_grid.grid_cells[n].alive);
+			// printf("X%d ", game_grid.grid_cells[n].cell_coordinates.x);
+			// printf("Y%d ", game_grid.grid_cells[n].cell_coordinates.y);
+			// printf("%d", game_grid.grid_cells[n].alive);
 
 			/* split into rows */
 			if((n + 1) % ROW_SIZE(GRID_SIZE) == 0){
@@ -74,8 +76,25 @@ static void render_grid(){
 static void init_grid(){
 	int n;
 
+	// X Y coordinates
+	unsigned int x = 0;
+	unsigned int y = 0;
+
 	for (n = 0; n < GRID_SIZE; n++){
+		int actual_n = n + 1;
 		game_grid.grid_cells[n].alive = xorshift((unsigned int *)&timestamp) % 2;
+		
+		if(actual_n % ROW_SIZE(GRID_SIZE) != 0){
+			game_grid.grid_cells[n].cell_coordinates.x = x;
+			game_grid.grid_cells[n].cell_coordinates.y = y;
+			y++;
+		}
+
+		if(actual_n % ROW_SIZE(GRID_SIZE) == 0){
+			x++;
+			y = 0;
+		}
+
 	}
 }
 
