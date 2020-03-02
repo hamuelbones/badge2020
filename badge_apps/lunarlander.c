@@ -39,6 +39,10 @@ extern char *strcat(char *dest, const char *src);
 #define DIMFACT 64
 
 static int lander_time = 0;
+char lunar_lander_msg[20] = { 0 };
+int lunar_lander_msg_timer = 30;
+int mission_success = 0;
+int astronauts_rescued = 0;
 
 /* Program states.  Initial state is LUNARLANDER_INIT */
 enum lunarlander_state_t {
@@ -82,6 +86,80 @@ static const struct point lander_points[] = {
 	{ 0, -7 },
 };
 
+static const struct point astronaut_points[] = {
+	{ -3, 8 },
+	{ -2, 2 },
+	{ 0, 0 },
+	{ 2, 2 },
+	{ 2, 8 },
+	{ -128, -128 },
+	{ -1, 1 },
+	{ -1, -7 },
+	{ 3, -6 },
+	{ 2, 2 },
+	{ -128, -128 },
+	{ 3, -5 },
+	{ 4, -2 },
+	{ 3, 2 },
+	{ -128, -128 },
+	{ -1, -6 },
+	{ -4, -5 },
+	{ -8, -9 },
+	{ -8, -12 },
+	{ -128, -128 },
+	{ 0, -8 },
+	{ -1, -10 },
+	{ 0, -10 },
+	{ 2, -8 },
+	{ 3, -6 },
+};
+
+static const struct point lunar_base_points[] = {
+	{ -27, 6 },
+	{ -28, 0 },
+	{ 24, -1 },
+	{ 31, 4 },
+	{ -27, 4 },
+	{ -128, -128 },
+	{ -26, -2 },
+	{ -24, -8 },
+	{ -22, -15 },
+	{ -14, -19 },
+	{ -5, -22 },
+	{ 5, -22 },
+	{ 14, -17 },
+	{ 21, -9 },
+	{ 23, -2 },
+	{ -128, -128 },
+	{ -19, -11 },
+	{ -19, -7 },
+	{ -15, -7 },
+	{ -15, -11 },
+	{ -19, -10 },
+	{ -128, -128 },
+	{ -8, -11 },
+	{ -9, -7 },
+	{ -6, -7 },
+	{ -6, -11 },
+	{ -7, -11 },
+	{ -128, -128 },
+	{ 4, -10 },
+	{ 5, -6 },
+	{ 8, -6 },
+	{ 7, -10 },
+	{ 3, -10 },
+	{ -128, -128 },
+	{ 13, -1 },
+	{ 13, -13 },
+	{ 18, -12 },
+	{ 18, -1 },
+	{ -128, -128 },
+	{ -26, -1 },
+	{ -25, -27 },
+	{ -31, -24 },
+	{ -26, -23 },
+};
+
 static int terrain_y[1024] = { 0 };
 
 static struct lander_data {
@@ -93,12 +171,22 @@ static struct lander_data {
 #define HORIZONTAL_FUEL (256)
 #define VERTICAL_FUEL (768)
 	int alive;
-} lander, oldlander;
+} lander;
 
 #define NUM_LANDING_ZONES 5
 struct fuel_tank {
 	int x, y;
 } fueltank[NUM_LANDING_ZONES];
+
+#define NUM_ASTRONAUTS 5
+struct astronaut {
+	int x, y;
+	unsigned char picked_up;
+} astronaut[NUM_ASTRONAUTS];
+
+struct lunar_base {
+	int x, y;
+} lunar_base;
 
 #define MAXSPARKS 50
 static struct spark_data {
@@ -115,20 +203,36 @@ static void add_spark(int x, int y, int vx, int vy)
 		if (!spark[i].alive) {
 			spark[i].x = x;
 			spark[i].y = y;
-			spark[i].vx = vx + (xorshift(&xorshift_state) & 0x03f) - 32;
-			spark[i].vy = vy + (xorshift(&xorshift_state) & 0x03f) - 32;
-			spark[i].alive = 2 + (xorshift(&xorshift_state) & 0x7);
+			spark[i].vx = vx + ((xorshift(&xorshift_state) >> 16) & 0x0ff) - 128;
+			spark[i].vy = vy + ((xorshift(&xorshift_state) >> 16) & 0x0ff) - 128;
+			spark[i].alive = 2 + ((xorshift(&xorshift_state) >> 16) & 0x7);
 			return;
 		}
 	}
 }
 
-static void add_sparks(struct lander_data *lander, int x, int y, int n)
+static void draw_lunar_lander_msg(int color)
+{
+	FbMove(5, 15);
+	FbColor(color);
+	FbWriteLine(lunar_lander_msg);
+}
+
+static void set_message(char *msg, int time)
+{
+	draw_lunar_lander_msg(BLACK);
+	strncpy(lunar_lander_msg, msg, sizeof(lunar_lander_msg));
+	lunar_lander_msg[19] = '\0';
+	lunar_lander_msg_timer = time;
+	draw_lunar_lander_msg(YELLOW);
+}
+
+static void add_sparks(struct lander_data *lander, int vx, int vy, int n)
 {
 	int i;
 
 	for (i = 0; i < n; i++)
-		add_spark(lander->x, lander->y, x, y);
+		add_spark(lander->x + vx, lander->y + vy, vx, vy);
 }
 
 static void explosion(struct lander_data *lander)
@@ -138,10 +242,11 @@ static void explosion(struct lander_data *lander)
 	for (i = 0; i < MAXSPARKS; i++) {
 		spark[i].x = lander->x;
 		spark[i].y = lander->y;
-		spark[i].vx = (xorshift(&xorshift_state) & 0xff) - 128;
-		spark[i].vy = (xorshift(&xorshift_state) & 0xff) - 128;
+		spark[i].vx = ((xorshift(&xorshift_state) >> 16) & 0xff) - 128;
+		spark[i].vy = ((xorshift(&xorshift_state) >> 16) & 0xff) - 128;
 		spark[i].alive = 100;
 	}
+	set_message("MISSION FAILED", 60);
 }
 
 static void move_sparks(void)
@@ -253,6 +358,26 @@ static void add_landing_zones(int t[], int start, int stop, int count)
 	}
 }
 
+static void place_astronauts(void)
+{
+	int i, j;
+
+	for (i = 0; i < NUM_ASTRONAUTS; i++) {
+		j = (xorshift(&xorshift_state) % 800) + 100;
+		astronaut[i].y = terrain_y[j] - 5;
+		astronaut[i].x = j * TERRAIN_SEGMENT_WIDTH;
+		astronaut[i].picked_up = 0;
+	}
+}
+
+static void place_lunar_base(void)
+{
+	int j;
+	j = (xorshift(&xorshift_state) % 50) + 925;
+	lunar_base.y = terrain_y[j] - 5;
+	lunar_base.x = j * TERRAIN_SEGMENT_WIDTH;
+}
+
 static void lunarlander_init(void)
 {
 	FbInit();
@@ -261,6 +386,8 @@ static void lunarlander_init(void)
 	terrain_y[1023] = -100;
 	init_terrain(terrain_y, 0, 1023);
 	add_landing_zones(terrain_y, 0, 1023, NUM_LANDING_ZONES);
+	place_astronauts();
+	place_lunar_base();
 	lunarlander_state = LUNARLANDER_RUN;
 	lander.x = 100 << 8;
 	lander.y = (terrain_y[9] - 60) << 8;
@@ -268,7 +395,8 @@ static void lunarlander_init(void)
 	lander.vy = 0;
 	lander.fuel = FULL_FUEL;
 	lander.alive = 1;
-	oldlander = lander;
+	mission_success = 0;
+	set_message("MOVE RIGHT", 30);
 }
 
 static void reduce_fuel(struct lander_data *lander, int amount)
@@ -287,19 +415,19 @@ static void check_buttons()
 	} else if (LEFT_BTN_AND_CONSUME) {
 		if (lander.fuel > 0) {
 			lander.vx = lander.vx - (1 << 7);
-			add_sparks(&lander, lander.vx + (5 << 8), lander.vy + 0, 5);
+			add_sparks(&lander, lander.vx + (5 << 8), lander.vy + 0, 10);
 			reduce_fuel(&lander, HORIZONTAL_FUEL);
 		}
 	} else if (RIGHT_BTN_AND_CONSUME) {
 		if (lander.fuel > 0) {
 			lander.vx = lander.vx + (1 << 7);
-			add_sparks(&lander, lander.vx - (5 << 8), lander.vy + 0, 5);
+			add_sparks(&lander, lander.vx - (5 << 8), lander.vy + 0, 10);
 			reduce_fuel(&lander, HORIZONTAL_FUEL);
 		}
 	} else if (UP_BTN_AND_CONSUME) {
 		if (lander.fuel > 0) {
 			lander.vy = lander.vy - (1 << 7);
-			add_sparks(&lander, lander.vx + 0, lander.vy + (5 << 8), 5);
+			add_sparks(&lander, lander.vx + 0, lander.vy + (5 << 8), 10);
 			reduce_fuel(&lander, VERTICAL_FUEL);
 		}
 	} else if (DOWN_BTN_AND_CONSUME) {
@@ -400,6 +528,7 @@ static void draw_terrain_segment(struct lander_data *lander, int i, int color)
 				FbLine(sx2, y2, sx2 + 7, y2 + 3);
 				FbLine(sx2 + 7, y2 + 3, sx2, y2 + 6);
 			}
+			set_message("REFUEL AT FLAG", 30);
 			break;
 		}
 	}
@@ -422,6 +551,60 @@ static void draw_terrain(struct lander_data *lander, int color)
 		draw_terrain_segment(lander, i, color);
 }
 
+static void draw_astronaut(struct lander_data *lander, int i, int color)
+{
+	int x, y;
+
+	x = astronaut[i].x - (lander->x >> 8) + SCREEN_XDIM / 2;
+	y = astronaut[i].y - (lander->y >> 8) + SCREEN_YDIM / 3;
+	if (x < 10 || x > SCREEN_XDIM - 10)
+		return;
+	if (y < 10 || y > SCREEN_YDIM - 10)
+		return;
+	FbDrawObject(astronaut_points, ARRAYSIZE(astronaut_points), color, x, y, 512);
+	set_message("RESCUE BUDDIES!", 30);
+	if (abs(astronaut[i].x - (lander->x >> 8)) < 9 && abs(astronaut[i].y - (lander->y >>8)) < 9) {
+		set_message("WOOHOO!", 60);
+		astronaut[i].picked_up = 1;
+	}
+}
+
+static void draw_lunar_base(struct lander_data *lander, int color)
+{
+	int i, x, y;
+
+	x = lunar_base.x - (lander->x >> 8) + SCREEN_XDIM / 2;
+	y = lunar_base.y - (lander->y >> 8) + SCREEN_YDIM / 3;
+	if (x < 20 || x > SCREEN_XDIM - 20)
+		return;
+	if (y < 20 || y > SCREEN_YDIM - 20)
+		return;
+	FbDrawObject(lunar_base_points, ARRAYSIZE(lunar_base_points), color, x, y, 512);
+	set_message("LAND ON BASE!", 30);
+	if (abs(lunar_base.x - (lander->x >> 8)) < 20 && abs(lunar_base.y - (lander->y >>8)) < 20) {
+		set_message("MISSION SUCCESS", 120);
+		if (mission_success == 0)
+			mission_success = 60;
+		astronauts_rescued = 0;
+		for (i = 0; i < NUM_ASTRONAUTS; i++)
+			if (astronaut[i].picked_up)
+				astronauts_rescued++;
+	}
+}
+
+static void draw_astronauts(struct lander_data *lander, int color)
+{
+	int i;
+
+	for (i = 0; i < NUM_ASTRONAUTS; i++) {
+		if (astronaut[i].picked_up)
+			continue;
+		draw_astronaut(lander, i, color);
+		if (astronaut[i].picked_up)
+			draw_astronaut(lander, i, BLACK);
+	}
+}
+
 static void move_lander(void)
 {
 	if (lander.alive < 0) {
@@ -431,7 +614,6 @@ static void move_lander(void)
 		}
 		return;
 	}
-	oldlander = lander;
 	lander_time++;
 	if (lander_time > 10000)
 		lander_time = 0;
@@ -442,31 +624,28 @@ static void move_lander(void)
 	lander.x += lander.vx;
 }
 
-static void draw_instruments_color(struct lander_data *lander, int color)
+static void update_message(void)
 {
-	char buf1[10], buf2[10];
-
-	itoa(buf1, (lander->x >> 8), 10);
-	itoa(buf2, (lander->y >> 8), 10);
-	FbMove(10, 110);
-	FbColor(color);
-	FbWriteLine(buf1);
-	FbMove(60, 110);
-	FbWriteLine(buf2);
-
-	itoa(buf1, lander->vx, 10);
-	itoa(buf2, lander->vy, 10);
-	FbMove(10, 120);
-	FbColor(color);
-	FbWriteLine(buf1);
-	FbMove(60, 120);
-	FbWriteLine(buf2);
+	if (lunar_lander_msg_timer > 0)
+		lunar_lander_msg_timer--;
+	if (lunar_lander_msg_timer == 0)
+		set_message("", 1);
 }
 
-static void draw_instruments(void)
+static void draw_stats(void)
 {
-	draw_instruments_color(&oldlander, BLACK);
-	draw_instruments_color(&lander, WHITE);
+	char buffer[10];
+
+	FbColor(YELLOW);
+	FbMove(5, 75);
+	FbWriteLine("BUDDIES");
+	FbMove(5, 90);
+	itoa(buffer, astronauts_rescued, 10);
+	FbWriteLine("RESCUED: ");
+	FbMove(80, 90);
+	FbWriteLine(buffer);
+	FbMove(5, 105);
+	FbWriteLine("OUT OF 5");
 }
 
 static void draw_screen()
@@ -474,19 +653,31 @@ static void draw_screen()
 	FbColor(WHITE);
 	draw_terrain(&lander, BLACK); /* Erase previously drawn terrain */
 	draw_sparks(&lander, BLACK);
-	move_lander();
+	draw_astronauts(&lander, BLACK);
+	draw_lunar_base(&lander, BLACK);
+	if (mission_success == 0) {
+		move_lander();
+	} else {
+		mission_success--;
+		if (mission_success == 0)
+			lunarlander_state = LUNARLANDER_INIT; /* start over */
+		draw_stats();
+	}
 	move_sparks();
+	update_message();
 	draw_terrain(&lander, WHITE); /* Draw terrain */
 	draw_lander();
+	draw_astronauts(&lander, GREEN);
+	draw_lunar_base(&lander, CYAN);
 	draw_fuel_gauge(&lander, RED);
 	draw_sparks(&lander, YELLOW);
-	draw_instruments();
-	FbSwapBuffers();
+	FbPaintNewRows();
 }
 
 static void lunarlander_run()
 {
-	check_buttons();
+	if (mission_success == 0)
+		check_buttons();
 	draw_screen();
 }
 
@@ -517,7 +708,7 @@ int lunarlander_cb(void)
 #ifdef __linux__
 int main(int argc, char *argv[])
 {
-        start_gtk(&argc, &argv, lunarlander_cb, 10);
+        start_gtk(&argc, &argv, lunarlander_cb, 30);
         return 0;
 }
 #endif
