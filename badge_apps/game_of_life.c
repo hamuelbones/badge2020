@@ -79,7 +79,7 @@ static void init_grid(){
 	}
 }
 
-static void myprogram_init(void)
+static void game_of_life_init(void)
 {
 	#ifdef __linux__
 		printf("grid size %d\nrow size: %d\n\n", GRID_SIZE, ROW_SIZE(GRID_SIZE));
@@ -111,30 +111,29 @@ static void draw_screen()
 	FbSwapBuffers();
 }
 
-static void myprogram_run()
+static void game_of_life_run()
 {
 	check_buttons();
 	draw_screen();
 }
 
-static void myprogram_exit()
+static void game_of_life_exit()
 {
 	gameoflife_state = GAMEOFLIFE_INIT; /* So that when we start again, we do not immediately exit */
 	returnToMenus();
 }
 
-/* You will need to rename myprogram_cb() something else. */
 int game_of_life_cb(void)
 {
 	switch (gameoflife_state) {
 	case GAMEOFLIFE_INIT:
-		myprogram_init();
+		game_of_life_init();
 		break;
 	case GAMEOFLIFE_RUN:
-		myprogram_run();
+		game_of_life_run();
 		break;
 	case GAMEOFLIFE_EXIT:
-		myprogram_exit();
+		game_of_life_exit();
 		break;
 	default:
 		break;
