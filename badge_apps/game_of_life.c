@@ -78,20 +78,22 @@ static void init_grid(){
 
 	// X Y coordinates
 	unsigned int x = 0;
-	unsigned int y;
+	unsigned int y = 0;
 
 	for (n = 0; n < GRID_SIZE; n++){
-		int actual_n = n + 1;
-		y = actual_n % ROW_SIZE(GRID_SIZE);
 		game_grid.grid_cells[n].alive = xorshift((unsigned int *)&timestamp) % 2;
 		
-		if(y != 0){
+		if((n+1) % ROW_SIZE(GRID_SIZE) != 0){
 			game_grid.grid_cells[n].cell_coordinates.x = x;
 			game_grid.grid_cells[n].cell_coordinates.y = y;
+			y++;
 		}
 
-		if(y == 0){
-			x++; 
+		if((n+1) % ROW_SIZE(GRID_SIZE) == 0){
+			game_grid.grid_cells[n].cell_coordinates.x = x;
+			game_grid.grid_cells[n].cell_coordinates.y = y;
+			x++;
+			y = 0;
 		}
 
 	}
