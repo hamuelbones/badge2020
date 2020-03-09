@@ -49,10 +49,38 @@ enum gameoflife_state_t {
 	GAMEOFLIFE_EXIT,
 };
 
+unsigned int next_gen[GRID_SIZE];
+
 static enum gameoflife_state_t gameoflife_state = GAMEOFLIFE_INIT;
+
+static void next_generation(unsigned int alive_count, unsigned int cell, int current_index){
+    if(cell == 1)
+    {
+        if(alive_count == 2 || alive_count == 3) {
+            next_gen[current_index] = 1;
+        } else {
+            next_gen[current_index] = 0;
+        }
+    } else {
+        if(alive_count == 3) {// only way a dead cell can be revived if it has exactly 3 alives neighbors
+            next_gen[current_index] = 1;
+        } else {
+            next_gen[current_index] = 0;
+        }
+    }
+}
+
+static int range(int num) {
+    if(num >= 0 && num < GRID_SIZE){
+        return 2;
+    } else {
+        return -1;
+    }
+}
 
 static void render_grid(){
 	int n;
+	unsigned int alive_count = 0;
 	for (n = 0; n < GRID_SIZE; n++){
 		#ifdef __linux__
 			// printf("random 1 or 0: %d\n", xorshift((unsigned int *)&timestamp) % 2);
@@ -60,13 +88,93 @@ static void render_grid(){
 			// printf("Y%d ", game_grid.grid_cells[n].cell_coordinates.y);
 			// printf("%d", game_grid.grid_cells[n].alive);
 
+			// lEFT neighbor
+			if(range(n - 1) == 2) {
+				if(n % ROW_SIZE(GRID_SIZE) != 0){// LEFT OUT OF BOUND cond
+					if(game_grid.grid_cells[n - 1].alive == 1) {
+						alive_count ++;
+					}
+				}
+			}
+
+			// RIGHT neighbor
+			if(range(n + 1) == 2) {
+				if((n+1) % ROW_SIZE(GRID_SIZE) != 0){// RIGHT OUT OF BOUND cond
+					if(game_grid.grid_cells[n + 1].alive == 1) {
+						alive_count ++;
+					}
+				}
+			}
+
+    		// TOP neighbor
+			if(range(n - ROW_SIZE(GRID_SIZE)) == 2) {
+				if(game_grid.grid_cells[n - ROW_SIZE(GRID_SIZE)].alive == 1) {
+					alive_count ++;
+				}  
+			}
+
+			// BOTTOM neighbor
+			if(range(n + ROW_SIZE(GRID_SIZE)) == 2) {
+				if(game_grid.grid_cells[n + ROW_SIZE(GRID_SIZE)].alive == 1) {
+					alive_count++;
+				}
+			}
+
+			// TOP RIGHT neighbor
+			if(range(n - (ROW_SIZE(GRID_SIZE) - 1)) == 2) {
+				if((n+1) % ROW_SIZE(GRID_SIZE) != 0){
+					if(game_grid.grid_cells[n - (ROW_SIZE(GRID_SIZE)-1)].alive == 1) {
+						alive_count++;
+					}
+				}
+			}
+
+			// TOP LEFT neighbor
+			if(range(n - (ROW_SIZE(GRID_SIZE) + 1)) == 2) {
+				if(n % ROW_SIZE(GRID_SIZE) != 0) {
+					if(game_grid.grid_cells[n - (ROW_SIZE(GRID_SIZE) + 1)].alive == 1) {
+						alive_count++;
+					}
+				}
+			}
+
+			// BOTTOM LEFT neighbor
+			if(range(n + (ROW_SIZE(GRID_SIZE) - 1)) == 2) {
+				if(n % ROW_SIZE(GRID_SIZE) != 0){
+					if(game_grid.grid_cells[n + (ROW_SIZE(GRID_SIZE) - 1)].alive == 1) {
+						alive_count++;
+					}   
+				}
+			}
+
+			// BOTTOM RIGHT
+			if(range(n + (ROW_SIZE(GRID_SIZE) + 1)) == 2) {
+				if((n+1) % ROW_SIZE(GRID_SIZE) != 0) {
+					if(game_grid.grid_cells[n + (ROW_SIZE(GRID_SIZE) + 1)].alive == 1) {
+						alive_count++;
+					}   
+				}
+			}
+
 			/* split into rows */
 			if((n + 1) % ROW_SIZE(GRID_SIZE) == 0){
 				printf("\n");
 			}
+
+			next_generation(alive_count, game_grid.grid_cells[n].alive, n);
+
+			alive_count = 0;
 			
 		#endif
 	}
+	// this is used to display the next generation for testing purposes. 
+	// for(int i = 0; i<GRID_SIZE; i++) {
+	// 	printf("%d", next_gen[i]);
+
+	// 	if((i + 1) % ROW_SIZE(GRID_SIZE) == 0){
+	// 		printf("\n");
+	// 	}
+	// }
 
 	#ifdef __linux__
 		printf("\n"); /* just separating with a newline for now*/
