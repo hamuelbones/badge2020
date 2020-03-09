@@ -227,12 +227,12 @@ static void set_message(char *msg, int time)
 	draw_lunar_lander_msg(YELLOW);
 }
 
-static void add_sparks(struct lander_data *lander, int vx, int vy, int n)
+static void add_sparks(int x, int y, int vx, int vy, int n)
 {
 	int i;
 
 	for (i = 0; i < n; i++)
-		add_spark(lander->x + vx, lander->y + vy, vx, vy);
+		add_spark(x, y, vx, vy);
 }
 
 static void explosion(struct lander_data *lander)
@@ -415,19 +415,19 @@ static void check_buttons()
 	} else if (LEFT_BTN_AND_CONSUME) {
 		if (lander.fuel > 0) {
 			lander.vx = lander.vx - (1 << 7);
-			add_sparks(&lander, lander.vx + (5 << 8), lander.vy + 0, 10);
+			add_sparks(lander.x + (5 << 8), lander.y, lander.vx + (5 << 8), lander.vy, 10);
 			reduce_fuel(&lander, HORIZONTAL_FUEL);
 		}
 	} else if (RIGHT_BTN_AND_CONSUME) {
 		if (lander.fuel > 0) {
 			lander.vx = lander.vx + (1 << 7);
-			add_sparks(&lander, lander.vx - (5 << 8), lander.vy + 0, 10);
+			add_sparks(lander.x - (5 << 8), lander.y, lander.vx - (5 << 8), lander.vy, 10);
 			reduce_fuel(&lander, HORIZONTAL_FUEL);
 		}
 	} else if (UP_BTN_AND_CONSUME) {
 		if (lander.fuel > 0) {
 			lander.vy = lander.vy - (1 << 7);
-			add_sparks(&lander, lander.vx + 0, lander.vy + (5 << 8), 10);
+			add_sparks(lander.x, lander.y + (5 << 8), lander.vx, lander.vy + (5 << 8), 10);
 			reduce_fuel(&lander, VERTICAL_FUEL);
 		}
 	} else if (DOWN_BTN_AND_CONSUME) {
@@ -582,7 +582,10 @@ static void draw_lunar_base(struct lander_data *lander, int color)
 	FbDrawObject(lunar_base_points, ARRAYSIZE(lunar_base_points), color, x, y, 512);
 	set_message("LAND ON BASE!", 30);
 	if (abs(lunar_base.x - (lander->x >> 8)) < 20 && abs(lunar_base.y - (lander->y >>8)) < 20) {
-		set_message("MISSION SUCCESS", 120);
+		if (astronauts_rescued > 0)
+			set_message("MISSION SUCCESS", 120);
+		else
+			set_message("MISSION FAILED", 120);
 		if (mission_success == 0)
 			mission_success = 60;
 		astronauts_rescued = 0;
@@ -622,6 +625,10 @@ static void move_lander(void)
 	}
 	lander.y += lander.vy;
 	lander.x += lander.vx;
+	if (lander.x < TERRAIN_SEGMENT_WIDTH << 8)
+		lander.x += ((int) (ARRAYSIZE(terrain_y) - 2) * 10 - TERRAIN_SEGMENT_WIDTH) << 8;
+	if (lander.x >= (((int) (ARRAYSIZE(terrain_y) - 1) * 10) << 8))
+		lander.x = (TERRAIN_SEGMENT_WIDTH << 8);
 }
 
 static void update_message(void)
@@ -646,6 +653,13 @@ static void draw_stats(void)
 	FbWriteLine(buffer);
 	FbMove(5, 105);
 	FbWriteLine("OUT OF 5");
+	FbMove(5, 120);
+	if (astronauts_rescued < 1)
+		FbWriteLine("DISASTER!");
+	else if (astronauts_rescued < 5)
+		FbWriteLine("TRAGEDY!");
+	else
+		FbWriteLine("GOOD JOB!");
 }
 
 static void draw_screen()
