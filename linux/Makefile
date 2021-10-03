@@ -1,5 +1,5 @@
 
-CFLAGS=-g -pthread -fsanitize=address -Wall -Wextra --pedantic -g
+CFLAGS=-g -pthread -fsanitize=address -Wall -Wextra --pedantic -g -D__linux__ -Wno-gnu-binary-literal
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
 GTKLDFLAGS:=$(shell pkg-config --libs gtk+-2.0) $(shell pkg-config --libs gthread-2.0)
 
@@ -19,9 +19,11 @@ USERNAME=username
 LUNARLANDER=lunarlander
 HACKING_SIMULATOR=hacking_simulator
 SPACETRIPPER=spacetripper
+SOKOBAN=sokoban
 
 all:	${LINUX_OBJS} bin/${MAZE} bin/${IRXMIT} bin/${LASERTAG} bin/badge_monsters bin/fixup_monster bin/username \
-	bin/sample_app bin/smashout bin/ghost-detector bin/lunarlander bin/${HACKING_SIMULATOR} bin/${SPACETRIPPER}
+	bin/sample_app bin/smashout bin/ghost-detector bin/lunarlander bin/${HACKING_SIMULATOR} bin/${SPACETRIPPER} \
+	bin/sokoban
 
 # we need to depend on ${BIN}/.t not on ${BIN} because BIN is a directory and the
 # timestamp changes whenever the directory contents change, and we need to depend
@@ -106,6 +108,9 @@ bin/${MAZE}:	${BIN} ${APPDIR}/${MAZE}.c linuxcompat.o bline.o xorshift.o achieve
 
 bin/${USERNAME}:	${BIN} ${APPDIR}/${USERNAME}.c
 	$(CC) ${CFLAGS} ${GTKCFLAGS} ${LINUX_OBJS} -o bin/${USERNAME} -I . -I ${BADGE_INC} ${APPDIR}/${USERNAME}.c ${GTKLDFLAGS}
+
+bin/sokoban:	${BIN} ${APPDIR}/${SOKOBAN}.c ${APPDIR}/sokoban/draw.c ${APPDIR}/sokoban/game.c ${APPDIR}/sokoban/levels.c ${APPDIR}/sokoban/tile.c  linuxcompat.o ${LINUX_OBJS}
+	$(CC) ${CFLAGS} ${GTKCFLAGS} ${LINUX_OBJS} -o bin/${SOKOBAN} -I . -I ${BADGE_INC} ${APPDIR}/${SOKOBAN}.c ${APPDIR}/sokoban/draw.c ${APPDIR}/sokoban/game.c ${APPDIR}/sokoban/levels.c ${APPDIR}/sokoban/tile.c  ${GTKLDFLAGS}
 
 linuxcompat.o:	linuxcompat.c linuxcompat.h
 	$(CC) ${CFLAGS} ${GTKCFLAGS} -c -I . linuxcompat.c -o linuxcompat.o
