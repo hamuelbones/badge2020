@@ -43,7 +43,7 @@ static SOKOBAN_GAME _sokoban;
 static enum sokoban_state_t sokoban_state = SOKOBAN_INIT;
 int8_t menuIndex;
 
-static void sokoban_init(void)
+static void sokoban_init(bool state_is_new)
 {
     FbInit();
     FbClear();
@@ -51,7 +51,9 @@ static void sokoban_init(void)
 }
 
 
-static void sokoban_main_menu() {
+static void sokoban_main_menu(bool state_is_new) {
+
+    bool draw = false;
 
     if (BUTTON_PRESSED_AND_CONSUME) {
         if (menuIndex == 0) {
@@ -66,10 +68,12 @@ static void sokoban_main_menu() {
             // Exit
             sokoban_state = SOKOBAN_EXIT;
         }
+        menuIndex = 0;
     }
 
     if (DOWN_BTN_AND_CONSUME) {
         menuIndex++;
+        draw = true;
         if (menuIndex > 2) {
             menuIndex = 2;
         }
@@ -77,12 +81,13 @@ static void sokoban_main_menu() {
 
     if (UP_BTN_AND_CONSUME) {
         menuIndex--;
+        draw = true;
         if (menuIndex < 0) {
             menuIndex = 0;
         }
     }
 
-    if (sokoban_state == SOKOBAN_MAIN_MENU) {
+    if (state_is_new || draw) {
         FbClear();
         FbMove(10, 5);
         FbColor(WHITE);
@@ -95,14 +100,14 @@ static void sokoban_main_menu() {
         FbMove(0, 5 + menuIndex * 8);
         FbWriteLine("-");
         FbSwapBuffers();
-    } else {
-        menuIndex = 0;
     }
+
 }
 
 
-static void sokoban_level_select_menu() {
+static void sokoban_level_select_menu(bool state_is_new) {
 
+    bool draw = false;
     if (BUTTON_PRESSED_AND_CONSUME) {
         soko_game_load_level(&_sokoban, soko_get_level(_sokoban.level_index));
         sokoban_state = SOKOBAN_PLAY;
@@ -113,15 +118,17 @@ static void sokoban_level_select_menu() {
         if (_sokoban.level_index != soko_level_count()-1) {
             _sokoban.level_index++;
         }
+        draw = true;
     }
 
     if (DOWN_BTN_AND_CONSUME) {
         if (_sokoban.level_index != 0) {
             _sokoban.level_index--;
         }
+        draw = true;
     }
 
-    if (sokoban_state == SOKOBAN_LEVEL_SELECT_MENU) {
+    if (state_is_new || draw) {
         FbClear();
         FbMove(10,5);
         FbColor(WHITE);
@@ -133,7 +140,7 @@ static void sokoban_level_select_menu() {
 }
 
 
-static void check_buttons_and_move_game()
+static void check_buttons_and_move_game(bool should_draw_already)
 {
     bool pressed = false;
     MOVE_DIRECTION direction = MOVE_UP;
@@ -158,13 +165,16 @@ static void check_buttons_and_move_game()
     if (pressed) {
         soko_game_move(&_sokoban, direction);
     }
+
+    if (pressed || should_draw_already) {
+        soko_draw_game(&_sokoban);
+    }
 }
 
 
-static void sokoban_play()
+static void sokoban_play(bool state_is_new)
 {
-    check_buttons_and_move_game();
-    soko_draw_game(&_sokoban);
+    check_buttons_and_move_game(state_is_new);
     bool solved = soko_is_solved(&_sokoban);
     if (solved) {
         sokoban_state = SOKOBAN_WIN_LEVEL;
@@ -172,8 +182,9 @@ static void sokoban_play()
 }
 
 
-static void sokoban_play_menu() {
+static void sokoban_play_menu(bool state_is_new) {
 
+    bool draw = false;
     if (BUTTON_PRESSED_AND_CONSUME) {
         if (menuIndex == 0) {
             // Resume
@@ -189,9 +200,11 @@ static void sokoban_play_menu() {
             // Exit
             sokoban_state = SOKOBAN_EXIT;
         }
+        menuIndex = 0;
     }
 
     if (DOWN_BTN_AND_CONSUME) {
+        draw = true;
         menuIndex++;
         if (menuIndex > 3) {
             menuIndex = 3;
@@ -199,13 +212,14 @@ static void sokoban_play_menu() {
     }
 
     if (UP_BTN_AND_CONSUME) {
+        draw = true;
         menuIndex--;
         if (menuIndex < 0) {
             menuIndex = 0;
         }
     }
 
-    if (sokoban_state == SOKOBAN_PLAY_MENU) {
+    if (state_is_new || draw) {
         FbClear();
         FbMove(10,5);
         FbColor(WHITE);
@@ -220,13 +234,11 @@ static void sokoban_play_menu() {
         FbMove(0, 5+menuIndex*8);
         FbWriteLine("-");
         FbSwapBuffers();
-    } else {
-        menuIndex = 0;
     }
 }
 
 
-static void sokoban_win_level() {
+static void sokoban_win_level(bool state_is_new) {
     if (BUTTON_PRESSED_AND_CONSUME) {
         _sokoban.level_index++;
         if (_sokoban.level_index == soko_level_count()) {
@@ -237,7 +249,7 @@ static void sokoban_win_level() {
         }
     }
 
-    if (sokoban_state == SOKOBAN_WIN_LEVEL) {
+    if (state_is_new) {
         FbClear();
         FbMove(10,5);
         FbColor(WHITE);
@@ -270,36 +282,39 @@ static void sokoban_win_level() {
     }
 }
 
-static void sokoban_exit()
+static void sokoban_exit(bool state_is_new)
 {
     sokoban_state = SOKOBAN_INIT; /* So that when we start again, we do not immediately exit */
     returnToMenus();
 }
 
 /* You will need to rename sokoban_cb() something else. */
+static enum sokoban_state_t last_state;
 int sokoban_cb(void)
 {
+    bool state_is_new = (last_state != sokoban_state);
+    last_state = sokoban_state;
     switch (sokoban_state) {
         case SOKOBAN_INIT:
-            sokoban_init();
+            sokoban_init(state_is_new);
             break;
         case SOKOBAN_MAIN_MENU:
-            sokoban_main_menu();
+            sokoban_main_menu(state_is_new);
             break;
         case SOKOBAN_LEVEL_SELECT_MENU:
-            sokoban_level_select_menu();
+            sokoban_level_select_menu(state_is_new);
             break;
         case SOKOBAN_PLAY:
-            sokoban_play();
+            sokoban_play(state_is_new);
             break;
         case SOKOBAN_PLAY_MENU:
-            sokoban_play_menu();
+            sokoban_play_menu(state_is_new);
             break;
         case SOKOBAN_WIN_LEVEL:
-            sokoban_win_level();
+            sokoban_win_level(state_is_new);
             break;
         case SOKOBAN_EXIT:
-            sokoban_exit();
+            sokoban_exit(state_is_new);
             break;
         default:
             break;
