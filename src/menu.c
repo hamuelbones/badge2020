@@ -501,7 +501,7 @@ const struct menu_t games_m[] = {
    {"Conductor",     VERT_ITEM, FUNCTION, {(struct menu_t *)conductor_cb}}, // Tell other badges to play notes
    {"Sensors",       VERT_ITEM, FUNCTION, {(struct menu_t *)adc_cb} },
    {"Lunar Rescue",  VERT_ITEM, FUNCTION, {(struct menu_t *)lunarlander_cb} },
-   {"Badge Monsters",VERT_ITEM, FUNCTION, {(struct menu_t *)badge_monsters_cb} },
+//   {"Badge Monsters",VERT_ITEM, FUNCTION, {(struct menu_t *)badge_monsters_cb} },
    {"Space Tripper", VERT_ITEM, FUNCTION, {(struct menu_t *)spacetripper_cb} },
    {"Hacking Simulator", VERT_ITEM, FUNCTION, {(struct menu_t *)hacking_simulator_cb} },
    {"Sokoban",       VERT_ITEM, FUNCTION, {(struct menu_t *)sokoban_cb}},
@@ -528,7 +528,7 @@ const struct menu_t settings_m[] = {
 const struct menu_t main_m[] = {
    {"Schedule",    VERT_ITEM, MENU, {schedule_m}},
    {"Games",       VERT_ITEM|DEFAULT_ITEM, MENU, {games_m}},
-   {"QC",          VERT_ITEM, FUNCTION, {(struct menu_t *)QC_cb}},
+   //{"QC",          VERT_ITEM, FUNCTION, {(struct menu_t *)QC_cb}},
    {"Settings",    VERT_ITEM|LAST_ITEM, MENU, {settings_m}},
 } ;
 

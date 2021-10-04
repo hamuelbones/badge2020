@@ -36,7 +36,7 @@ void disp_asset_saver(){
             break;
 
         case 2:
-            render_screen_save_monsters();
+            //render_screen_save_monsters();
             break;
 //        case 2:
 //            for(x=0; x<126; x+=20)
