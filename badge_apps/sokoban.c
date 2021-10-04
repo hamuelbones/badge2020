@@ -4,10 +4,10 @@
 
 // Sokoban, for the badge. The original block-pushing puzzle game.
 
-#ifdef __linux__
+#include <string.h>
 #include <stdio.h>
+#ifdef __linux__
 #include <sys/time.h> /* for gettimeofday */
-#include <string.h> /* for memset */
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -17,14 +17,7 @@
 #include "colors.h"
 #include "menu.h"
 #include "buttons.h"
-
-/* TODO: I shouldn't have to declare these myself. */
-#define size_t int
-extern char *strcpy(char *dest, const char *src);
-extern char *strncpy(char *dest, const char *src, size_t n);
-extern void *memset(void *s, int c, size_t n);
-extern char *strcat(char *dest, const char *src);
-
+#include "fb.h"
 #endif
 
 #include "sokoban/types.h"
@@ -64,6 +57,7 @@ static void sokoban_main_menu() {
         if (menuIndex == 0) {
             // New Game
             _sokoban.level_index = 0;
+            soko_game_load_level(&_sokoban, soko_get_level(_sokoban.level_index));
             sokoban_state = SOKOBAN_PLAY;
         } else if (menuIndex == 1) {
             // Level Select
@@ -131,8 +125,8 @@ static void sokoban_level_select_menu() {
         FbClear();
         FbMove(10,5);
         FbColor(WHITE);
-        char text[20];
-        snprintf(text, 20, "Level: %u", _sokoban.level_index+1);
+        char text[20] = "Level: ";
+        itoa(text+7, _sokoban.level_index+1, 10);
         FbWriteLine(text);
         FbSwapBuffers();
     }
@@ -247,18 +241,23 @@ static void sokoban_win_level() {
         FbClear();
         FbMove(10,5);
         FbColor(WHITE);
-        char text[20];
+        char text[20] = "Lv ";
 
         FbMove(10,5+8);
-        snprintf(text, 20, "Lv %u Clear!", _sokoban.level_index+1);
+        itoa(text+3, _sokoban.level_index+1, 10);
+        strcat(text, " Clear!");
         FbWriteLine(text);
 
         FbMove(10,5+16);
-        snprintf(text, 20, "Moves: %u", _sokoban.moves);
+        text[0] = '\0';
+        strcat(text, "Moves: ");
+        itoa(text+7, _sokoban.moves, 10);
         FbWriteLine(text);
 
         FbMove(10,5+24);
-        snprintf(text, 20, "Pushes: %u", _sokoban.pushes);
+        text[0] = '\0';
+        strcat(text, "Pushes: ");
+        itoa(text+8, _sokoban.pushes, 10);
         FbWriteLine(text);
 
         FbMove(10,5+32);

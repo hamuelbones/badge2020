@@ -55,7 +55,7 @@ SRC_APPS_C = \
 	badge_apps/lunarlander.c badge_apps/spacetripper.c \
 	badge_apps/hacking_simulator.c \
 	badge_apps/smashout.c badge_apps/ghost-detector.c \
-	badge_apps/lunarlander.c badge_apps/sokoban.c
+	badge_apps/sokoban.c \
 	badge_apps/sokoban/draw.c badge_apps/sokoban/game.c \
 	badge_apps/sokoban/levels.c badge_apps/sokoban/tile.c
 
@@ -87,7 +87,8 @@ install: all
 
 $(APPOBJ): $(SRC_APPS_C)
 	mkdir -p $(BUILD)/badge_apps
-	$(CROSS_COMPILE)gcc $(BADGE_CFLAGS) -o $@ badge_apps/$(subst .o,.c,$(notdir $@))
+	mkdir -p $(dir $@)
+	$(CROSS_COMPILE)gcc $(BADGE_CFLAGS) -o $@ badge_apps/$(subst .o,.c,$(@:build/badge_apps/%=%))
 
 $(BDGOBJ): $(SRC_BADGE_C)
 	mkdir -p $(BUILD)/src

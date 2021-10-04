@@ -4,7 +4,9 @@
 #include "draw.h"
 #include "tile.h"
 #include "game.h"
-#include <printf.h>
+
+#include <stdio.h>
+#include <string.h>
 
 #ifdef __linux__
 #include "../linux/linuxcompat.h"
@@ -12,6 +14,7 @@
 #include "colors.h"
 #include "menu.h"
 #include "buttons.h"
+#include "fb.h"
 #endif
 
 static void _soko_draw_tile(const TILE* t, SOKOBAN_COORDS base_xy) {
@@ -165,18 +168,24 @@ void soko_draw_game(SOKOBAN_GAME *game) {
 
     //Render game stats
     FbColor(WHITE);
-    char text_data[12];
+    char text_data[12] = {0};
     FbMove(SOKO_PADDING_X, 16*SOKO_TILESIZE_Y-5);
-    snprintf(text_data, 12, "L%u", game->level_index+1);
+    text_data[0] = 'L';
+    itoa(text_data+1, game->level_index+1, 10);
     FbWriteLine(text_data);
 
     FbMove(SOKO_PADDING_X+SOKO_TILESIZE_X*3, 16*SOKO_TILESIZE_Y-5);
-    snprintf(text_data, 12, "M:%u", game->moves);
+    text_data[0] = 'M';
+    text_data[1] = ':';
+    itoa(text_data+2, game->moves, 10);
     FbWriteLine(text_data);
 
     FbMove(SOKO_PADDING_X+SOKO_TILESIZE_X*9, 16*SOKO_TILESIZE_Y-5);
-    snprintf(text_data, 12, "P:%u", game->pushes);
+    text_data[0] = 'P';
+    text_data[1] = ':';
+    itoa(text_data+2, game->pushes, 10);
     FbWriteLine(text_data);
+
 
     FbSwapBuffers();
 }
